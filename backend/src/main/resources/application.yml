@@ -1,0 +1,87 @@
+spring:
+  application:
+    name: ka-bus-tracking-backend
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:ka_bus_tracking}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&rewriteBatchedStatements=true
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: none          # schema owned by database/schema/schema.sql
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=5000,expireAfterWrite=60s
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+app:
+  jwt:
+    # REQUIRED. Provide a strong random secret of at least 48 chars via JWT_SECRET.
+    secret: ${JWT_SECRET:}
+    expiration-ms: ${JWT_EXPIRATION_MS:900000}       # 15 minutes
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:2592000000}  # 30 days
+  cors:
+    # comma-separated allowed origins for the passenger web app
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+  api:
+    base-url: ${API_BASE_URL:http://localhost:8080}
+  rate-limit:
+    login-per-minute: ${RATE_LIMIT_LOGIN:5}
+    gps-per-minute: ${RATE_LIMIT_GPS:120}
+    public-requests-per-minute: ${RATE_LIMIT_PUBLIC:120}
+  gps:
+    min-interval-ms: ${GPS_MIN_INTERVAL_MS:3000}
+    timestamp-max-skew-ms: ${GPS_MAX_SKEW_MS:30000}
+  live-status:
+    live-seconds: ${LIVE_SECONDS:60}
+    stale-seconds: ${STALE_SECONDS:600}
+  retention:
+    location-history-days: ${LOCATION_HISTORY_RETENTION_DAYS:30}
+  routing:
+    base-url: ${OSRM_BASE_URL:https://router.project-osrm.org}
+    timeout-ms: ${OSRM_TIMEOUT_MS:15000}
+    max-retries: ${OSRM_MAX_RETRIES:1}
+    max-stops: ${OSRM_MAX_STOPS:200}
+    validation-radius-km: ${OSRM_VALIDATION_RADIUS_KM:5.0}
+  search:
+    min-transfer-minutes: ${SEARCH_MIN_TRANSFER_MINUTES:10}
+  seed:
+    admin-username: ${SEED_ADMIN_USERNAME:admin}
+    admin-password: ${SEED_ADMIN_PASSWORD:Admin@123}
+    admin-email: ${SEED_ADMIN_EMAIL:admin@kabus.local}
+    admin-full-name: ${SEED_ADMIN_FULL_NAME:Super Administrator}
+
+logging:
+  level:
+    org.hibernate.SQL: ${LOG_SQL:warn}
+    com.kabus.tracking: info
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized

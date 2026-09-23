@@ -1,0 +1,49 @@
+# ============================================================
+# KA Bus Tracking - Git ignore (PUBLIC repository)
+# Keep every secret, credential, and private artifact out.
+# ============================================================
+
+# ---- Local sandbox & secrets (REAL credentials live here) ----
+.sandbox/
+**/jwt.secret
+database/seed/dev_test_account.sql
+**/.env
+**/.env.*
+!.env.example
+**/local.properties
+*.pem
+*.key
+*.jks
+*.p12
+*.pfx
+*.keystore
+*service_account*.json
+*service-account*.json
+*credentials*.json
+
+# ---- Logs (may contain tokens/URLs) ----
+*.log
+*.err
+
+# ---- Backend build output ----
+backend/target/
+
+# ---- Android build output ----
+android-admin/.gradle/
+android-admin/build/
+android-admin/app/build/
+android-crew/.gradle/
+android-crew/build/
+android-crew/app/build/
+
+# ---- Passenger web ----
+passenger-web/node_modules/
+passenger-web/dist/
+*.tsbuildinfo
+
+# ---- IDE / OS noise ----
+.idea/
+*.iml
+.vscode/
+Thumbs.db
+.DS_Store

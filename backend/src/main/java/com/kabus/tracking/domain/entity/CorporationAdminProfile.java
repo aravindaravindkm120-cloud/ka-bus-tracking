@@ -1,0 +1,27 @@
+package com.kabus.tracking.domain.entity;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+/** DIVISION_ADMIN profile for a corporation-level admin. Scoped to one entire corporation. */
+@Entity
+@Table(name = "corporation_admins")
+@Getter
+@Setter
+@NoArgsConstructor
+public class CorporationAdminProfile extends BaseEntity {
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "corporation_id", nullable = false)
+    private Corporation corporation;
+}

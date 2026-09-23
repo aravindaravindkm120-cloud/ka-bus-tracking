@@ -1,0 +1,49 @@
+# Test profile - self-contained H2 in MySQL compatibility mode.
+# Schema is created from the JPA entities (ddl-auto=create-drop), so tests do
+# not require a running MySQL server.
+spring:
+  datasource:
+    url: jdbc:h2:mem:kabustest;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;NON_KEYWORDS=USER
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+  cache:
+    type: simple
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:test-secret-that-is-at-least-forty-eight-characters-long-for-hmac-signing}
+    expiration-ms: 900000
+    refresh-expiration-ms: 2592000000
+  cors:
+    allowed-origins: http://localhost:5173
+  rate-limit:
+    login-per-minute: 10000
+    gps-per-minute: 100000
+    public-requests-per-minute: 100000
+  gps:
+    min-interval-ms: 0
+    timestamp-max-skew-ms: 300000
+  seed:
+    admin-username: admin
+    admin-password: Admin@123
+    admin-email: admin@kabus.local
+    admin-full-name: Super Administrator
+  live-status:
+    evaluator-interval-ms: 3600000
+    evaluator-initial-delay-ms: 3600000
+  retention:
+    location-history-days: 30
+  search:
+    min-transfer-minutes: 10
+
+logging:
+  level:
+    com.kabus.tracking: warn
