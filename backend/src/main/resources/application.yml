@@ -30,7 +30,7 @@ spring:
       spec: maximumSize=5000,expireAfterWrite=60s
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${PORT:${SERVER_PORT:8080}}
   error:
     include-message: never
     include-stacktrace: never
