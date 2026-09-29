@@ -1,0 +1,43 @@
+server {
+    # ${PORT} is substituted at container start by nginx's envsubst
+    # entrypoint, so this binds the dynamic port Railway injects.
+    listen ${PORT};
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Single-page app fallback.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Vite emits content-hashed filenames, so these are safe to pin.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # Never cache the entry document, or a redeploy will not be picked up.
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
+    location ~* \.(woff2|svg|png|jpg|jpeg|mp4)$ {
+        expires 30d;
+        add_header Cache-Control "public";
+    }
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types
+        text/plain
+        text/css
+        text/javascript
+        application/javascript
+        application/json
+        application/manifest+json
+        image/svg+xml;
+}

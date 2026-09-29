@@ -1,0 +1,24 @@
+# ---- dependencies ----
+node_modules
+
+# ---- build output: rebuilt inside the image, never copied in ----
+dist
+
+# ---- logs ----
+*.log
+*.err
+
+# ---- local / secret env files ----
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.*.local
+
+# .env.production is deliberately NOT ignored. It contains only public Vite
+# build-time config (VITE_API_URL / VITE_WS_URL) and the build stage needs it.
+!.env.production
+
+tsconfig.tsbuildinfo
