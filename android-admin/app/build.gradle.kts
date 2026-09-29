@@ -21,7 +21,7 @@ android {
         }
         release {
             isMinifyEnabled = false
-            buildConfigField("String", "API_BASE_URL", "\"https://tracking.example.in\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://ka-bus-tracking-production.up.railway.app\"")
         }
     }
 

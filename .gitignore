@@ -10,6 +10,7 @@ database/seed/dev_test_account.sql
 **/.env
 **/.env.*
 !.env.example
+!passenger-web/.env.production
 **/local.properties
 *.pem
 *.key
