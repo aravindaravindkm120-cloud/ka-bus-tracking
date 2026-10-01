@@ -1,19 +1,23 @@
 package com.kabus.tracking.config;
 
+import com.kabus.tracking.domain.entity.Corporation;
+import com.kabus.tracking.domain.entity.CorporationAdminProfile;
+import com.kabus.tracking.domain.entity.Crew;
 import com.kabus.tracking.domain.entity.Depot;
 import com.kabus.tracking.domain.entity.DepotHeadProfile;
 import com.kabus.tracking.domain.entity.Division;
-import com.kabus.tracking.domain.entity.DivisionAdminProfile;
 import com.kabus.tracking.domain.entity.DivisionManagerProfile;
+import com.kabus.tracking.domain.entity.Role;
 import com.kabus.tracking.domain.entity.SuperAdminProfile;
 import com.kabus.tracking.domain.entity.Town;
 import com.kabus.tracking.domain.entity.TownManagerProfile;
 import com.kabus.tracking.domain.entity.User;
 import com.kabus.tracking.domain.enums.RoleCode;
+import com.kabus.tracking.domain.repository.CorporationAdminProfileRepository;
+import com.kabus.tracking.domain.repository.CorporationRepository;
 import com.kabus.tracking.domain.repository.CrewRepository;
 import com.kabus.tracking.domain.repository.DepotHeadProfileRepository;
 import com.kabus.tracking.domain.repository.DepotRepository;
-import com.kabus.tracking.domain.repository.DivisionAdminProfileRepository;
 import com.kabus.tracking.domain.repository.DivisionManagerProfileRepository;
 import com.kabus.tracking.domain.repository.DivisionRepository;
 import com.kabus.tracking.domain.repository.RoleRepository;
@@ -47,11 +51,12 @@ public class DataInitializer implements ApplicationRunner {
     private final DivisionRepository divisionRepository;
     private final DepotRepository depotRepository;
     private final TownRepository townRepository;
+    private final CorporationRepository corporationRepository;
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final CrewRepository crewRepository;
     private final SuperAdminProfileRepository superAdminProfileRepository;
-    private final DivisionAdminProfileRepository divisionAdminProfileRepository;
+    private final CorporationAdminProfileRepository corporationAdminProfileRepository;
     private final DivisionManagerProfileRepository divisionManagerProfileRepository;
     private final DepotHeadProfileRepository depotHeadProfileRepository;
     private final TownManagerProfileRepository townManagerProfileRepository;
@@ -61,11 +66,12 @@ public class DataInitializer implements ApplicationRunner {
     public DataInitializer(DivisionRepository divisionRepository,
                            DepotRepository depotRepository,
                            TownRepository townRepository,
+                           CorporationRepository corporationRepository,
                            RoleRepository roleRepository,
                            UserRepository userRepository,
                            CrewRepository crewRepository,
                            SuperAdminProfileRepository superAdminProfileRepository,
-                           DivisionAdminProfileRepository divisionAdminProfileRepository,
+                           CorporationAdminProfileRepository corporationAdminProfileRepository,
                            DivisionManagerProfileRepository divisionManagerProfileRepository,
                            DepotHeadProfileRepository depotHeadProfileRepository,
                            TownManagerProfileRepository townManagerProfileRepository,
@@ -74,11 +80,12 @@ public class DataInitializer implements ApplicationRunner {
         this.divisionRepository = divisionRepository;
         this.depotRepository = depotRepository;
         this.townRepository = townRepository;
+        this.corporationRepository = corporationRepository;
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
         this.crewRepository = crewRepository;
         this.superAdminProfileRepository = superAdminProfileRepository;
-        this.divisionAdminProfileRepository = divisionAdminProfileRepository;
+        this.corporationAdminProfileRepository = corporationAdminProfileRepository;
         this.divisionManagerProfileRepository = divisionManagerProfileRepository;
         this.depotHeadProfileRepository = depotHeadProfileRepository;
         this.townManagerProfileRepository = townManagerProfileRepository;
@@ -131,14 +138,22 @@ public class DataInitializer implements ApplicationRunner {
         }
     }
 
+    /**
+     * Creates the demo/test account for every non-SUPER_ADMIN role.
+     *
+     * <p>Idempotency is per account, never global: each demo account is created
+     * only when its own username is absent, and each role membership only when
+     * that specific user lacks it. There is deliberately no
+     * {@code userRepository.count()} guard - {@link #ensureSuperAdmin()} always
+     * runs first and guarantees at least one row exists, so a global count
+     * check can never let the demo seed through once SUPER_ADMIN exists.
+     * Re-running this method is therefore a no-op, which makes restarts safe.</p>
+     *
+     * <p>The SUPER_ADMIN account is never read or written by this method.</p>
+     */
     private void ensureDemoUsersIfEnabled() {
         if (!"true".equalsIgnoreCase(System.getenv("SEED_DEMO_USERS"))
                 && !"dev".equalsIgnoreCase(System.getProperty("spring.profiles.active", ""))) {
-            return;
-        }
-        long count = userRepository.count();
-        if (count > 1) {
-            log.info("Demo users skipped because the database already contains accounts.");
             return;
         }
 
@@ -150,42 +165,70 @@ public class DataInitializer implements ApplicationRunner {
             return;
         }
 
-        createAdminProfile("divisionadmin", "DivAdmin@123", "Division Admin", RoleCode.DIVISION_ADMIN, "division", division.get(), null, null);
-        createAdminProfile("divisionmanager", "DivMgr@123", "Division Manager", RoleCode.DIVISION_MANAGER, "division", division.get(), null, null);
-        createAdminProfile("depothead", "DepotHead@123", "Depot Head", RoleCode.DEPOT_HEAD, "depot", null, depot.get(), null);
-        createAdminProfile("townmanager", "TownMgr@123", "Town Manager", RoleCode.TOWN_MANAGER, "town", null, null, town.get());
+        // DIVISION_ADMIN is a corporation-wide role: resolve the corporation that
+        // owns the seed division and record corporation_admins membership.
+        Corporation corporation = division.get().getCorporation();
+        if (corporation == null) {
+            corporation = corporationRepository.findAll().stream().findFirst().orElse(null);
+        }
+        if (corporation == null) {
+            log.info("Demo users skipped: no corporation found for the seed division.");
+            return;
+        }
+
+        createAdminProfile("divisionadmin", "DivAdmin@123", "Division Admin",
+                RoleCode.DIVISION_ADMIN, corporation, null, null, null);
+        createAdminProfile("divisionmanager", "DivMgr@123", "Division Manager",
+                RoleCode.DIVISION_MANAGER, null, division.get(), null, null);
+        createAdminProfile("depothead", "DepotHead@123", "Depot Head",
+                RoleCode.DEPOT_HEAD, null, null, depot.get(), null);
+        createAdminProfile("townmanager", "TownMgr@123", "Town Manager",
+                RoleCode.TOWN_MANAGER, null, null, null, town.get());
 
         createCrewUser("driver", "Driver@123", "Driver Ramesh");
         createCrewUser("conductor", "Conductor@123", "Conductor Suresh");
 
         linkCrewAccount("driver", "CRW-DRV-001");
         linkCrewAccount("conductor", "CRW-CND-001");
-        log.info("Created development accounts: divisionadmin, divisionmanager, depothead, townmanager, driver, conductor. "
+        log.info("Ensured development accounts: divisionadmin, divisionmanager, depothead, townmanager, driver, conductor. "
                 + "DISABLE with SEED_DEMO_USERS=false in production.");
     }
 
+    /**
+     * Creates the user row for a demo account only when that username is free.
+     * The email is derived from the username and is therefore unique per
+     * account, which also satisfies the {@code uq_users_email} unique key.
+     * An existing account is never re-passworded or otherwise modified.
+     */
     private User createUser(String username, String password, String fullName) {
         return userRepository.findByUsername(username).orElseGet(() -> {
+            String email = username + "@kabus.dev";
             User user = new User();
             user.setUsername(username);
             user.setFullName(fullName);
-            user.setEmail(username + "@kabus.dev");
+            user.setEmail(userRepository.existsByEmail(email) ? null : email);
             user.setPasswordHash(passwordEncoder.encode(password));
             return userRepository.save(user);
         });
     }
 
     private void createAdminProfile(String username, String password, String fullName,
-                                    RoleCode role, String scopeType,
+                                    RoleCode role, Corporation corporation,
                                     Division division, Depot depot, Town town) {
         User user = createUser(username, password, fullName);
+        Role roleEntity = roleRepository.findByCode(role)
+                .orElseGet(() -> roleRepository.save(new Role(role, role.name(), null)));
+        if (user.getRoles().stream().noneMatch(r -> r.getCode() == role)) {
+            user.getRoles().add(roleEntity);
+            userRepository.save(user);
+        }
         switch (role) {
             case DIVISION_ADMIN -> {
-                if (division != null && divisionAdminProfileRepository.findByUserId(user.getId()).isEmpty()) {
-                    DivisionAdminProfile p = new DivisionAdminProfile();
+                if (corporation != null && corporationAdminProfileRepository.findByUserId(user.getId()).isEmpty()) {
+                    CorporationAdminProfile p = new CorporationAdminProfile();
                     p.setUser(user);
-                    p.setDivision(division);
-                    divisionAdminProfileRepository.save(p);
+                    p.setCorporation(corporation);
+                    corporationAdminProfileRepository.save(p);
                 }
             }
             case DIVISION_MANAGER -> {
@@ -222,12 +265,21 @@ public class DataInitializer implements ApplicationRunner {
         createUser(username, password, fullName);
     }
 
+    /**
+     * Links a crew account to its crew record through {@code crew.user_id}.
+     * Crew authentication stays username-based and the crew role still comes
+     * from {@code crew.crew_type}; this method only fills in the linkage and
+     * never rewrites an existing, different owner.
+     */
     private void linkCrewAccount(String username, String badge) {
         userRepository.findByUsername(username)
-                .flatMap(u -> crewRepository.findByBadgeNo(badge))
-                .ifPresent(crew -> userRepository.findByUsername(username).ifPresent(user -> {
-                    crew.setUser(user);
-                    crewRepository.save(crew);
-                }));
+                .flatMap(user -> crewRepository.findByBadgeNo(badge)
+                        .filter(crew -> crew.getUser() == null
+                                || crew.getUser().getId().equals(user.getId()))
+                        .map(crew -> {
+                            crew.setUser(user);
+                            return crew;
+                        }))
+                .ifPresent(crewRepository::save);
     }
 }
