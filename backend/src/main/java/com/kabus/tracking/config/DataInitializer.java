@@ -277,19 +277,26 @@ public class DataInitializer implements ApplicationRunner {
      * keeps the demo login working without touching production crew data.</p>
      */
     private void linkCrewAccount(String username, String preferredBadge, String crewType) {
-        userRepository.findByUsername(username).ifPresent(user ->
-                crewRepository.findByBadgeNo(preferredBadge).ifPresentOrElse(
-                        crew -> {
-                            if (crew.getUser() != null && !crew.getUser().getId().equals(user.getId())) {
-                                log.info("Crew badge {} is owned by another account; creating a dedicated "
-                                        + "crew record for demo account {}.", preferredBadge, username);
-                                createDemoCrewRecord(user, preferredBadge, crewType);
-                                return;
-                            }
-                            crew.setUser(user);
-                            crewRepository.save(crew);
-                        },
-                        () -> createDemoCrewRecord(user, preferredBadge, crewType)));
+        userRepository.findByUsername(username).ifPresent(user -> {
+            // A crew account must resolve to exactly one crew record, because
+            // crew login looks it up by user_id. If one is already linked there
+            // is nothing to do: re-running must never add a second record.
+            if (crewRepository.findByUserId(user.getId()).isPresent()) {
+                return;
+            }
+            crewRepository.findByBadgeNo(preferredBadge).ifPresentOrElse(
+                    crew -> {
+                        if (crew.getUser() != null) {
+                            log.info("Crew badge {} is owned by another account; creating a dedicated "
+                                    + "crew record for demo account {}.", preferredBadge, username);
+                            createDemoCrewRecord(user, preferredBadge, crewType);
+                            return;
+                        }
+                        crew.setUser(user);
+                        crewRepository.save(crew);
+                    },
+                    () -> createDemoCrewRecord(user, preferredBadge, crewType));
+        });
     }
 
     /** Creates a crew record for a demo crew account, linked via crew.user_id. */

@@ -250,6 +250,33 @@ Crew driver = crewRepository.findByBadgeNo("CRW-DRV-001").orElseThrow();
     }
 
     @Test
+    @DisplayName("a demo crew account never gets a second crew record across restarts")
+    void neverCreatesASecondCrewRecord() {
+        // Production-shaped precondition: the preferred badge is taken by a real
+        // crew member, which forces the demo record to be created with a suffix.
+        Crew existing = crewRepository.findByBadgeNo("CRW-DRV-001").orElseThrow();
+        existing.setUser(user("ramesh.kumar", RoleCode.DRIVER));
+        crewRepository.save(existing);
+
+        runInitializer();
+        runInitializer();
+        runInitializer();
+
+        User demoDriver = demo("driver");
+        List<Crew> forDemoDriver = crewRepository.findAll().stream()
+                .filter(c -> c.getUser() != null && c.getUser().getId().equals(demoDriver.getId()))
+                .toList();
+        // crew login resolves the role via findByUserId, which needs a unique row.
+        assertThat(forDemoDriver).hasSize(1);
+        assertThat(crewRepository.findByUserId(demoDriver.getId())).isPresent();
+
+        List<Crew> forDemoConductor = crewRepository.findAll().stream()
+                .filter(c -> c.getUser() != null && c.getUser().getId().equals(demo("conductor").getId()))
+                .toList();
+        assertThat(forDemoConductor).hasSize(1);
+    }
+
+    @Test
     @DisplayName("crew linkage is not duplicated when the initializer runs again")
     void crewLinkageIsStableAcrossRuns() {
         runInitializer();
