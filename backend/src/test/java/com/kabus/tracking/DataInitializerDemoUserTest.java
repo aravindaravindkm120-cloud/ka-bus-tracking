@@ -8,6 +8,7 @@ import com.kabus.tracking.domain.entity.Depot;
 import com.kabus.tracking.domain.entity.Division;
 import com.kabus.tracking.domain.entity.Town;
 import com.kabus.tracking.domain.entity.User;
+import com.kabus.tracking.domain.enums.RoleCode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -204,6 +205,48 @@ Crew driver = crewRepository.findByBadgeNo("CRW-DRV-001").orElseThrow();
                 .get()
                 .extracting(Crew::getCrewType)
                 .isEqualTo("CONDUCTOR");
+    }
+
+@Test
+    @DisplayName("a demo crew account never steals a crew badge owned by another user")
+    void doesNotStealCrewBadgeOwnedBySomeoneElse() {
+        // Production-shaped precondition: CRW-DRV-001 already belongs to a real
+        // crew member, so the demo driver must get its own record.
+        Crew existing = crewRepository.findByBadgeNo("CRW-DRV-001").orElseThrow();
+        User realCrewMember = user("ramesh.kumar", RoleCode.DRIVER);
+        existing.setUser(realCrewMember);
+        crewRepository.save(existing);
+
+        runInitializer();
+
+        User demoDriver = demo("driver");
+        Crew ownerAfter = crewRepository.findByBadgeNo("CRW-DRV-001").orElseThrow();
+        assertThat(ownerAfter.getUser().getId())
+                .as("the real crew member must keep the badge")
+                .isEqualTo(realCrewMember.getId());
+
+        Crew demoCrew = crewRepository.findByUserId(demoDriver.getId()).orElseThrow();
+        assertThat(demoCrew.getBadgeNo()).isNotEqualTo("CRW-DRV-001");
+        assertThat(demoCrew.getCrewType()).isEqualTo("DRIVER");
+
+        // And the demo driver can actually authenticate as crew.
+        assertThat(crewRepository.findByUserId(demoDriver.getId())).isPresent();
+    }
+
+    @Test
+    @DisplayName("a demo crew record is created when the preferred badge does not exist at all")
+    void createsCrewRecordWhenBadgeMissing() {
+        jdbc.update("DELETE FROM crew WHERE badge_no = ?", "CRW-DRV-001");
+        jdbc.update("DELETE FROM crew WHERE badge_no = ?", "CRW-CND-001");
+
+        runInitializer();
+
+        Crew demoDriver = crewRepository.findByUserId(demo("driver").getId()).orElseThrow();
+        Crew demoConductor = crewRepository.findByUserId(demo("conductor").getId()).orElseThrow();
+        assertThat(demoDriver.getBadgeNo()).startsWith("CRW-DRV-001");
+        assertThat(demoDriver.getCrewType()).isEqualTo("DRIVER");
+        assertThat(demoConductor.getBadgeNo()).startsWith("CRW-CND-001");
+        assertThat(demoConductor.getCrewType()).isEqualTo("CONDUCTOR");
     }
 
     @Test

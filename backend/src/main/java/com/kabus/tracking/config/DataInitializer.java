@@ -188,8 +188,8 @@ public class DataInitializer implements ApplicationRunner {
         createCrewUser("driver", "Driver@123", "Driver Ramesh");
         createCrewUser("conductor", "Conductor@123", "Conductor Suresh");
 
-        linkCrewAccount("driver", "CRW-DRV-001");
-        linkCrewAccount("conductor", "CRW-CND-001");
+        linkCrewAccount("driver", "CRW-DRV-001", "DRIVER");
+        linkCrewAccount("conductor", "CRW-CND-001", "CONDUCTOR");
         log.info("Ensured development accounts: divisionadmin, divisionmanager, depothead, townmanager, driver, conductor. "
                 + "DISABLE with SEED_DEMO_USERS=false in production.");
     }
@@ -268,18 +268,50 @@ public class DataInitializer implements ApplicationRunner {
     /**
      * Links a crew account to its crew record through {@code crew.user_id}.
      * Crew authentication stays username-based and the crew role still comes
-     * from {@code crew.crew_type}; this method only fills in the linkage and
-     * never rewrites an existing, different owner.
+     * from {@code crew.crew_type}.
+     *
+     * <p>The preferred badge is used when it is unclaimed or already owned by
+     * this same account. When that badge belongs to a different, real crew
+     * member the demo account gets its own crew record instead: reassigning a
+     * production crew badge would silently break that person's login. This
+     * keeps the demo login working without touching production crew data.</p>
      */
-    private void linkCrewAccount(String username, String badge) {
-        userRepository.findByUsername(username)
-                .flatMap(user -> crewRepository.findByBadgeNo(badge)
-                        .filter(crew -> crew.getUser() == null
-                                || crew.getUser().getId().equals(user.getId()))
-                        .map(crew -> {
+    private void linkCrewAccount(String username, String preferredBadge, String crewType) {
+        userRepository.findByUsername(username).ifPresent(user ->
+                crewRepository.findByBadgeNo(preferredBadge).ifPresentOrElse(
+                        crew -> {
+                            if (crew.getUser() != null && !crew.getUser().getId().equals(user.getId())) {
+                                log.info("Crew badge {} is owned by another account; creating a dedicated "
+                                        + "crew record for demo account {}.", preferredBadge, username);
+                                createDemoCrewRecord(user, preferredBadge, crewType);
+                                return;
+                            }
                             crew.setUser(user);
-                            return crew;
-                        }))
-                .ifPresent(crewRepository::save);
+                            crewRepository.save(crew);
+                        },
+                        () -> createDemoCrewRecord(user, preferredBadge, crewType)));
+    }
+
+    /** Creates a crew record for a demo crew account, linked via crew.user_id. */
+    private void createDemoCrewRecord(User user, String preferredBadge, String crewType) {
+        String badge = preferredBadge;
+        int suffix = 0;
+        while (crewRepository.findByBadgeNo(badge).isPresent()) {
+            badge = preferredBadge + "-DEMO" + (++suffix);
+            if (suffix > 100) {
+                log.warn("Unable to allocate a demo badge derived from {}.", preferredBadge);
+                return;
+            }
+        }
+        Crew crew = new Crew();
+        crew.setBadgeNo(badge);
+        crew.setFullName(user.getFullName());
+        crew.setUser(user);
+        crew.setCrewType(crewType);
+        crew.setStatus("ACTIVE");
+        crew.setDutyStatus("OFF_DUTY");
+        crewRepository.save(crew);
+        log.info("Created demo crew record {} ({}) for account {}.",
+                badge, crew.getCrewType(), user.getUsername());
     }
 }
