@@ -57,6 +57,20 @@ class PassengerApiTest extends TestSupport {
     }
 
     @Test
+    void publicEndpoints_missingRequiredParam_return400_not500() throws Exception {
+        mvc.perform(get("/api/public/routes"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+
+        mvc.perform(get("/api/public/stops"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+
+        mvc.perform(get("/api/public/buses/nearby").param("latitude", "14.5"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void search_findsBusOnRunningTripForThatRoute() throws Exception {
         Corporation corp = corporation();
         Division div = division(corp);

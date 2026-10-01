@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -52,6 +53,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<Map<String, Object>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return body(HttpStatus.BAD_REQUEST, "Invalid value for parameter '" + ex.getName() + "'.");
+    }
+
+    /**
+     * A missing required query parameter is a client mistake, not a server
+     * fault. Without this it falls through to the generic handler and the
+     * caller gets a 500 for what should be a 400.
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingParam(MissingServletRequestParameterException ex) {
+        return body(HttpStatus.BAD_REQUEST, "Required parameter '" + ex.getParameterName() + "' is missing.");
     }
 
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
