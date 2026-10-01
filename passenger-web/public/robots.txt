@@ -1,0 +1,8 @@
+# KA Bus Tracking - Passenger Web
+# Everything on this site is public and safe to crawl.
+# There are no authenticated pages, so nothing is disallowed.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://hearty-mindfulness-production-9d37.up.railway.app/sitemap.xml

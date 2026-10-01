@@ -1,22 +1,91 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-IN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b6e51" />
-    <meta name="description" content="Karnataka Bus Tracking – find live buses between any two stops in real time using real GPS positions." />
+
+    <title>KA Bus Tracking - Live Karnataka Bus Tracking</title>
+    <meta
+      name="description"
+      content="KA Bus Tracking helps passengers find and track Karnataka buses live on the map. Search buses, routes, stops and nearby buses."
+    />
+    <link rel="canonical" href="https://hearty-mindfulness-production-9d37.up.railway.app/" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="KA Bus" />
-    <meta property="og:title" content="KA Bus Tracking" />
-    <meta property="og:description" content="Live Karnataka public bus tracking – real-time GPS position, routes, stops and status." />
+
+    <!-- Open Graph: preview when the page is shared in a chat or social feed. -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="KA Bus Tracking" />
+    <meta property="og:locale" content="en_IN" />
+    <meta property="og:title" content="KA Bus Tracking - Live Karnataka Bus Tracking" />
+    <meta
+      property="og:description"
+      content="KA Bus Tracking helps passengers find and track Karnataka buses live on the map. Search buses, routes, stops and nearby buses."
+    />
+    <meta property="og:url" content="https://hearty-mindfulness-production-9d37.up.railway.app/" />
+
+    <!-- Twitter/X uses the same Open Graph data; card type only needs stating. -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="KA Bus Tracking - Live Karnataka Bus Tracking" />
+    <meta
+      name="twitter:description"
+      content="KA Bus Tracking helps passengers find and track Karnataka buses live on the map. Search buses, routes, stops and nearby buses."
+    />
+
+    <!--
+      Structured data limited to facts this page can actually prove. No ratings,
+      reviews, address, phone number or organisation is declared, because the
+      site does not publish any of those.
+    -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "KA Bus Tracking",
+        "url": "https://hearty-mindfulness-production-9d37.up.railway.app/",
+        "description": "Live tracking of Karnataka buses: search buses between two stops and follow their current location on the map.",
+        "inLanguage": "en-IN"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "KA Bus Tracking",
+        "url": "https://hearty-mindfulness-production-9d37.up.railway.app/",
+        "applicationCategory": "NavigationApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "description": "Find and track Karnataka buses live on the map. Search for a bus by route, view route and stop information, and see the current position of each bus.",
+        "inLanguage": "en-IN"
+      }
+    </script>
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>KA Bus Tracking · Live Karnataka Bus Tracking</title>
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
   </head>
   <body>
     <div id="root"></div>
+    <!--
+      The passenger map is rendered by React, so this is only a fallback for
+      visitors and crawlers with JavaScript disabled.
+    -->
+    <noscript>
+      <div style="max-width: 40rem; margin: 2rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; line-height: 1.6">
+        <h1>KA Bus Tracking</h1>
+        <p>
+          KA Bus Tracking shows where Karnataka buses are right now. Search for a bus between two
+          stops, then follow its live position on the map, together with its route and stop
+          information.
+        </p>
+        <p>The live map needs JavaScript. Please enable it in your browser to use KA Bus Tracking.</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

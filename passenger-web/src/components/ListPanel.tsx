@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { TouchEvent } from 'react'
 import type { BusSummary, FavoriteItem, RecentSearchItem } from '../types'
 import { api, friendlyMessage } from '../api'
+import SeoIntro from './SeoIntro'
 
 const statusEmoji = (s: string) =>
   s.toLowerCase() === 'live' ? '🟢' : s.toLowerCase() === 'stale' ? '🟡' : '⚫'
@@ -263,6 +264,7 @@ export default function ListPanel({
 
         <div className="list-body" ref={bodyRef}>
           {tab === 'results' && resultsContent()}
+          {tab === 'results' && <SeoIntro />}
 
           {tab === 'favorites' && (
             <ul className="bus-list">

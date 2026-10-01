@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  KA Bus Tracking - Passenger Web.
+
+  The passenger site is a single page: there is no routing, no public detail
+  page per route, and no other URL that is meant to be indexed on its own.
+  So exactly one URL is listed. API paths, WebSocket endpoints and any
+  authenticated area are intentionally absent.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://hearty-mindfulness-production-9d37.up.railway.app/</loc>
+    <lastmod>2026-10-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

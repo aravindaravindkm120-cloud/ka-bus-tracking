@@ -1081,6 +1081,34 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 }
 .bottom-ad .ad-slot { margin-top: 0; }
 
+/* ============================ Intro copy (SEO) ==============================
+   Visible text explaining what the site does, so the page is understandable
+   on its own rather than being an unlabelled map. Rendered after the bus
+   results and sized to stay compact, so it never delays the live list. */
+
+.seo-intro {
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.seo-intro h2 {
+  margin: 0 0 4px;
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
+.seo-intro p {
+  margin: 0;
+}
+
+.seo-intro strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 /* ============================ App banner / toasts ============================ */
 
 .app-banner {
