@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.time.LocalDate;
@@ -188,7 +189,7 @@ class DepotHeadScopeTest extends TestSupport {
     void crossDepotWrites_areForbidden() throws Exception {
         forbidden(put("/api/admin/fleet/buses/" + busA2.getId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json(Map.of("busType", "ORDINARY", "capacity", 40))), token);
+                .content(json(Map.of("capacity", 40))), token);
         forbidden(patch("/api/admin/fleet/buses/" + busA2.getId() + "/enabled")
                 .param("enabled", "false"), token);
         forbidden(put("/api/admin/staff/" + staffA2.getId())
@@ -219,17 +220,20 @@ class DepotHeadScopeTest extends TestSupport {
 
     @Test
     void createBusOutsideOwnDepot_isForbidden() throws Exception {
+        // Referencing a real bus number of the foreign depot keeps the request
+        // body valid, so the rejection comes from the scope guard rather than
+        // from bean validation.
         forbidden(post("/api/admin/fleet/buses")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json(Map.of(
-                        "registrationNo", uniqueBase("KA-XX"),
-                        "busType", "ORDINARY", "capacity", 40,
+                        "busNumberId", busA2.getBusNumber().getId(),
+                        "capacity", 40,
                         "depotId", depotA2.getId(), "townId", townA2.getId()))), token);
         forbidden(post("/api/admin/fleet/buses")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json(Map.of(
-                        "registrationNo", uniqueBase("KA-YY"),
-                        "busType", "ORDINARY", "capacity", 40,
+                        "busNumberId", busB.getBusNumber().getId(),
+                        "capacity", 40,
                         "depotId", depotB.getId(), "townId", townB.getId()))), token);
     }
 
@@ -252,11 +256,22 @@ class DepotHeadScopeTest extends TestSupport {
 
     @Test
     void depotHead_canCreateWithinOwnDepot() throws Exception {
+        // A depot head defines a bus number, then registers a vehicle on it.
+        MvcResult createdBusNumber = mvc.perform(post("/api/admin/fleet/bus-numbers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of(
+                                "busNumber", uniqueBase("KA-OWN"),
+                                "busType", "ORDINARY",
+                                "depotId", depotA1.getId(), "townId", townA1.getId())))
+                        .header(AUTH, bearer(token)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
         mvc.perform(post("/api/admin/fleet/buses")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of(
-                                "registrationNo", uniqueBase("KA-OWN"),
-                                "busType", "ORDINARY", "capacity", 40,
+                                "busNumberId", busNumberId(createdBusNumber),
+                                "capacity", 40,
                                 "depotId", depotA1.getId(), "townId", townA1.getId())))
                         .header(AUTH, bearer(token)))
                 .andExpect(status().isCreated());
@@ -310,10 +325,7 @@ class DepotHeadScopeTest extends TestSupport {
         return "Bearer " + token;
     }
 
-    private String json(Object body) throws Exception {
-        return om.writeValueAsString(body);
-    }
-
+    
     private void forbidden(MockHttpServletRequestBuilder request, String token) throws Exception {
         mvc.perform(request.header(AUTH, bearer(token)))
                 .andExpect(status().isForbidden());

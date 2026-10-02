@@ -10,6 +10,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * A physical vehicle in the fleet. The bus number it runs on lives in
+ * {@link BusNumber}; this entity only records the vehicle-specific facts
+ * (capacity, make/model, GPS device, lifecycle status).
+ *
+ * <p>These accessors are convenience views over the master. They are not mapped
+ * columns - the owning type uses field access, so only {@link #busNumber} is
+ * persisted.</p>
+ */
 @Entity
 @Table(name = "buses")
 @Getter
@@ -18,18 +27,16 @@ import lombok.Setter;
 public class Bus extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "bus_number_id", nullable = false)
+    private BusNumber busNumber;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "town_id", nullable = false)
     private Town town;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "depot_id", nullable = false)
     private Depot depot;
-
-    @Column(name = "registration_no", nullable = false, length = 20, unique = true)
-    private String registrationNo;
-
-    @Column(name = "bus_type", nullable = false, length = 40)
-    private String busType = "ORDINARY";
 
     @Column(name = "capacity", nullable = false)
     private Integer capacity = 40;
@@ -54,4 +61,14 @@ public class Bus extends BaseEntity {
 
     @Column(name = "enabled", nullable = false)
     private boolean enabled = true;
+
+    /** The bus number's number, kept under its historical field name for callers. */
+    public String getRegistrationNo() {
+        return busNumber == null ? null : busNumber.getBusNumber();
+    }
+
+    /** The bus number's type, kept under its historical field name for callers. */
+    public String getBusType() {
+        return busNumber == null ? null : busNumber.getBusType();
+    }
 }

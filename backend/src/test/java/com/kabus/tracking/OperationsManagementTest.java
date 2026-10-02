@@ -103,11 +103,11 @@ class OperationsManagementTest extends TestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].registrationNo").value(bus.get("registrationNo").asText()));
 
-        // Duplicate registration -> 409
-        mvc.perform(post("/api/admin/fleet/buses")
+        // The same bus number may not be defined twice for one depot -> 409
+        mvc.perform(post("/api/admin/fleet/bus-numbers")
                         .header("Authorization", "Bearer " + superToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(busBody(bus.get("registrationNo").asText(), depot.getId(), town.getId())))
+                        .content(busNumberBody(bus.get("registrationNo").asText(), depot.getId(), town.getId())))
                 .andExpect(status().isConflict());
     }
 
@@ -115,10 +115,12 @@ class OperationsManagementTest extends TestSupport {
     void fleetRejectsTownFromAnotherDepot() throws Exception {
         Depot otherDepot = depot(div);
         Town otherTown = town(otherDepot);
+        Long busNumberId = createBusNumber(superToken, "KA02CD" + suffix().replace("-", ""),
+                depot.getId(), town.getId());
         mvc.perform(post("/api/admin/fleet/buses")
                         .header("Authorization", "Bearer " + superToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(busBody("KA02CD" + suffix().replace("-", ""), depot.getId(), otherTown.getId())))
+                        .content(busBody(busNumberId, depot.getId(), otherTown.getId())))
                 .andExpect(status().isBadRequest());
     }
 
@@ -154,10 +156,14 @@ class OperationsManagementTest extends TestSupport {
         Depot otherDepot = depot(otherDiv);
         Town otherTown = town(otherDepot);
 
+        // The bus number itself is created as super admin, so the scoped admin's
+        // rejection below comes from the fleet endpoint, not from setup.
+        Long busNumberId = createBusNumber(superToken, "KA05IJ" + suffix().replace("-", ""),
+                otherDepot.getId(), otherTown.getId());
         mvc.perform(post("/api/admin/fleet/buses")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(busBody("KA05IJ" + suffix().replace("-", ""), otherDepot.getId(), otherTown.getId())))
+                        .content(busBody(busNumberId, otherDepot.getId(), otherTown.getId())))
                 .andExpect(status().isForbidden());
     }
 
@@ -331,20 +337,43 @@ class OperationsManagementTest extends TestSupport {
         return adminLoginToken(admin, RoleCode.DIVISION_ADMIN);
     }
 
-    private JsonNode createBus(String token, String registration, Long depotId, Long townId) throws Exception {
+    /** Creates a bus number and registers one vehicle on it. */
+    private JsonNode createBus(String token, String busNumber, Long depotId, Long townId) throws Exception {
+        return createBus(token, createBusNumber(token, busNumber, depotId, townId), depotId, townId);
+    }
+
+    private JsonNode createBus(String token, Long busNumberId, Long depotId, Long townId) throws Exception {
         MvcResult result = mvc.perform(post("/api/admin/fleet/buses")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(busBody(registration, depotId, townId)))
+                        .content(busBody(busNumberId, depotId, townId)))
                 .andExpect(status().isCreated())
                 .andReturn();
         return om.readTree(result.getResponse().getContentAsString());
     }
 
-    private String busBody(String registration, Long depotId, Long townId) throws Exception {
+    private Long createBusNumber(String token, String busNumber, Long depotId, Long townId) throws Exception {
+        MvcResult result = mvc.perform(post("/api/admin/fleet/bus-numbers")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(busNumberBody(busNumber, depotId, townId)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return om.readTree(result.getResponse().getContentAsString()).get("id").asLong();
+    }
+
+    private String busNumberBody(String busNumber, Long depotId, Long townId) throws Exception {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("registrationNo", registration);
+        m.put("busNumber", busNumber);
         m.put("busType", "ORDINARY");
+        m.put("depotId", depotId);
+        m.put("townId", townId);
+        return om.writeValueAsString(m);
+    }
+
+    private String busBody(Long busNumberId, Long depotId, Long townId) throws Exception {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("busNumberId", busNumberId);
         m.put("capacity", 45);
         m.put("depotId", depotId);
         m.put("townId", townId);

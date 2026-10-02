@@ -112,11 +112,28 @@ ON DUPLICATE KEY UPDATE full_name = VALUES(full_name);
 -- ------------------------------------------------------------------
 -- Sample bus, route, stops, trip
 -- ------------------------------------------------------------------
-INSERT INTO buses (town_id, depot_id, registration_no, bus_type, capacity, fuel_type, make_model, manufacture_year, status)
-SELECT t.id, dp.id, 'KA-30-F-2025', 'ORDINARY', 40, 'DIESEL', 'TATA Starbus', 2023, 'ACTIVE'
-FROM towns t JOIN depots dp ON dp.id = t.depot_id
+-- The bus number is the master; the vehicle points at it.
+INSERT INTO bus_numbers (town_id, depot_id, division_id, corporation_id, bus_number, bus_type)
+SELECT t.id, dp.id, d.id, d.corporation_id, 'KA-30-F-2025', 'ORDINARY'
+FROM towns t JOIN depots dp ON dp.id = t.depot_id JOIN divisions d ON d.id = dp.division_id
 WHERE t.code = 'KWN'
 ON DUPLICATE KEY UPDATE bus_type = VALUES(bus_type);
+
+-- One seeded vehicle per bus number. buses has no unique key on the bus number
+-- (a depot legitimately runs several vehicles on the same service), so
+-- ON DUPLICATE KEY cannot make this idempotent the way it was when
+-- registration_no was unique. Guard on the seeded vehicle instead, so a re-run
+-- does not add a second bus - which would also fan out the trips insert below.
+INSERT INTO buses (bus_number_id, town_id, depot_id, capacity, fuel_type, make_model, manufacture_year, status)
+SELECT bn.id, bn.town_id, bn.depot_id, 40, 'DIESEL', 'TATA Starbus', 2023, 'ACTIVE'
+FROM bus_numbers bn
+WHERE bn.bus_number = 'KA-30-F-2025'
+  AND NOT EXISTS (
+      SELECT 1 FROM (SELECT bus_number_id, make_model, manufacture_year FROM buses) b
+      WHERE b.bus_number_id = bn.id
+        AND b.make_model = 'TATA Starbus'
+        AND b.manufacture_year = 2023
+  );
 
 INSERT INTO routes (division_id, code, name, origin, destination, distance_km, est_duration_min, status)
 SELECT d.id, 'R-KWR-KNG', 'Karwar - Kumta - Honnavar', 'Karwar', 'Honnavar', 92.30, 90, 'ACTIVE'
@@ -142,7 +159,7 @@ SELECT r.id, 5, 'Honnavar',        14.277470, 74.446510, 92.3   FROM routes r WH
 
 INSERT INTO trips (route_id, bus_id, trip_number, trip_date, scheduled_departure, scheduled_arrival, status, direction)
 SELECT r.id, b.id, 'KWR-KNG-001', CURDATE(), CONCAT(CURDATE(), ' 06:00:00'), CONCAT(CURDATE(), ' 07:30:00'), 'SCHEDULED', 'OUTBOUND'
-FROM routes r JOIN buses b ON b.registration_no = 'KA-30-F-2025'
+FROM routes r JOIN buses b JOIN bus_numbers bn ON bn.id = b.bus_number_id AND bn.bus_number = 'KA-30-F-2025'
 WHERE r.code = 'R-KWR-KNG'
 ON DUPLICATE KEY UPDATE route_id = VALUES(route_id);
 
@@ -160,7 +177,7 @@ ON DUPLICATE KEY UPDATE crew_type = VALUES(crew_type);
 
 INSERT INTO bus_assignments (trip_id, bus_id, status)
 SELECT t.id, b.id, 'ACTIVE'
-FROM trips t JOIN buses b ON b.registration_no = 'KA-30-F-2025'
+FROM trips t JOIN buses b JOIN bus_numbers bn ON bn.id = b.bus_number_id AND bn.bus_number = 'KA-30-F-2025'
 WHERE t.trip_number = 'KWR-KNG-001' AND t.trip_date = CURDATE()
 ON DUPLICATE KEY UPDATE bus_id = VALUES(bus_id);
 

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.time.LocalDate;
@@ -192,7 +193,7 @@ class TownManagerStrictScopeTest extends TestSupport {
     void crossTownWrites_areForbidden() throws Exception {
         forbidden(put("/api/admin/fleet/buses/" + busA2.getId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json(Map.of("busType", "ORDINARY", "capacity", 40))), token);
+                .content(json(Map.of("capacity", 40))), token);
         forbidden(patch("/api/admin/fleet/buses/" + busA2.getId() + "/enabled")
                 .param("enabled", "false"), token);
         forbidden(put("/api/admin/staff/" + staffA2.getId())
@@ -256,11 +257,20 @@ class TownManagerStrictScopeTest extends TestSupport {
 
     @Test
     void createBus_ownTown_isAllowed() throws Exception {
+        MvcResult createdBusNumber = mvc.perform(post("/api/admin/fleet/bus-numbers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of(
+                                "busNumber", uniqueBase("KA-OWN"),
+                                "busType", "ORDINARY",
+                                "depotId", depotA.getId(), "townId", townA1.getId())))
+                        .header(AUTH, bearer(token)))
+                .andExpect(status().isCreated())
+                .andReturn();
         mvc.perform(post("/api/admin/fleet/buses")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of(
-                                "registrationNo", uniqueBase("KA-OWN"),
-                                "busType", "ORDINARY", "capacity", 40,
+                                "busNumberId", busNumberId(createdBusNumber),
+                                "capacity", 40,
                                 "depotId", depotA.getId(), "townId", townA1.getId())))
                         .header(AUTH, bearer(token)))
                 .andExpect(status().isCreated());
@@ -268,17 +278,19 @@ class TownManagerStrictScopeTest extends TestSupport {
 
     @Test
     void createBus_otherTown_isForbidden() throws Exception {
+        // busA2 and busB each own a bus number of a town outside this manager's
+        // scope, so the body is valid and the scope guard must reject it.
         forbidden(post("/api/admin/fleet/buses")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json(Map.of(
-                        "registrationNo", uniqueBase("KA-OTHER"),
-                        "busType", "ORDINARY", "capacity", 40,
+                        "busNumberId", busA2.getBusNumber().getId(),
+                        "capacity", 40,
                         "depotId", depotA.getId(), "townId", townA2.getId()))), token);
         forbidden(post("/api/admin/fleet/buses")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json(Map.of(
-                        "registrationNo", uniqueBase("KA-OTHERDIV"),
-                        "busType", "ORDINARY", "capacity", 40,
+                        "busNumberId", busB.getBusNumber().getId(),
+                        "capacity", 40,
                         "depotId", depotB.getId(), "townId", townB.getId()))), token);
     }
 
@@ -286,7 +298,7 @@ class TownManagerStrictScopeTest extends TestSupport {
     void moveBusToOtherTown_isForbidden() throws Exception {
         forbidden(put("/api/admin/fleet/buses/" + busA1.getId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json(Map.of("busType", "ORDINARY", "capacity", 40, "townId", townA2.getId()))), token);
+                .content(json(Map.of("capacity", 40, "townId", townA2.getId()))), token);
     }
 
     @Test
@@ -367,10 +379,7 @@ class TownManagerStrictScopeTest extends TestSupport {
         return "Bearer " + token;
     }
 
-    private String json(Object body) throws Exception {
-        return om.writeValueAsString(body);
-    }
-
+    
     private void forbidden(MockHttpServletRequestBuilder request, String token) throws Exception {
         mvc.perform(request.header(AUTH, bearer(token)))
                 .andExpect(status().isForbidden());

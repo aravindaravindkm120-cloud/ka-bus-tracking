@@ -177,7 +177,7 @@ private fun AppShell(app: KaBusAdminApp, onSignOut: () -> Unit) {
                 ) { page ->
                     when (tabs[page].first) {
                         RootTab.Dashboard -> DashboardScreen(app)
-                        RootTab.Trips -> TripsScreen(app)
+                        RootTab.Trips -> TripsScreen(app, canManage = canManageTrips(role))
                         RootTab.Live -> LiveMapScreen(app)
                         RootTab.Crew -> CrewScreen(app)
                         RootTab.More -> MoreScreen(
@@ -247,6 +247,18 @@ private fun DashTopBar(
                 }
             )
     }
+}
+
+/**
+ * Whether to offer trip creation and crew assignment.
+ *
+ * Mirrors the server: any administrative scope may create a trip, provided the
+ * route, bus depot and bus town all fall inside it (see ScopeGuard). So this is
+ * true for every admin role, and hidden only for a role with no admin scope.
+ */
+private fun canManageTrips(role: String?): Boolean = when (role) {
+    "SUPER_ADMIN", "DIVISION_ADMIN", "DIVISION_MANAGER", "DEPOT_HEAD", "TOWN_MANAGER" -> true
+    else -> false
 }
 
 /**

@@ -13,6 +13,7 @@ import java.util.Optional;
 
 public interface BusRepository extends JpaRepository<Bus, Long> {
 
+    @Query("select b from Bus b where upper(b.busNumber.busNumber) = upper(:registrationNo)")
     Optional<Bus> findByRegistrationNo(String registrationNo);
 
     Page<Bus> findByDepotIdIn(Collection<Long> depotIds, Pageable pageable);
@@ -42,22 +43,22 @@ public interface BusRepository extends JpaRepository<Bus, Long> {
                               @Param("status") String status);
 
     @Query("select b from Bus b where b.depot.id in :depotIds and ("
-            + "lower(b.registrationNo) like lower(concat('%', :term, '%')) "
-            + "or lower(coalesce(b.busType, '')) like lower(concat('%', :term, '%')) "
+            + "lower(b.busNumber.busNumber) like lower(concat('%', :term, '%')) "
+            + "or lower(coalesce(b.busNumber.busType, '')) like lower(concat('%', :term, '%')) "
             + "or lower(coalesce(b.makeModel, '')) like lower(concat('%', :term, '%')))")
     Page<Bus> searchInDepots(@Param("depotIds") Collection<Long> depotIds,
                              @Param("term") String term, Pageable pageable);
 
     @Query("select b from Bus b where b.town.id in :townIds and ("
-            + "lower(b.registrationNo) like lower(concat('%', :term, '%')) "
-            + "or lower(coalesce(b.busType, '')) like lower(concat('%', :term, '%')) "
+            + "lower(b.busNumber.busNumber) like lower(concat('%', :term, '%')) "
+            + "or lower(coalesce(b.busNumber.busType, '')) like lower(concat('%', :term, '%')) "
             + "or lower(coalesce(b.makeModel, '')) like lower(concat('%', :term, '%')))")
     Page<Bus> searchInTowns(@Param("townIds") Collection<Long> townIds,
                             @Param("term") String term, Pageable pageable);
 
     @Query("select b from Bus b where "
-            + "lower(b.registrationNo) like lower(concat('%', :term, '%')) "
-            + "or lower(coalesce(b.busType, '')) like lower(concat('%', :term, '%')) "
+            + "lower(b.busNumber.busNumber) like lower(concat('%', :term, '%')) "
+            + "or lower(coalesce(b.busNumber.busType, '')) like lower(concat('%', :term, '%')) "
             + "or lower(coalesce(b.makeModel, '')) like lower(concat('%', :term, '%'))")
     Page<Bus> searchAll(@Param("term") String term, Pageable pageable);
 }

@@ -185,8 +185,75 @@ interface ApiService {
     ): TownResponse
 
     // ------------------------------------------------------------------
-    // Fleet (buses)
+    // Organization picker - read-only, scope-aware lookups for the
+    // Corporation -> Division -> Depot -> Town dropdowns. Usable by every
+    // admin role, unlike /organizations above (SUPER_ADMIN only).
     // ------------------------------------------------------------------
+
+    @GET("api/admin/org-picker/corporations")
+    suspend fun pickerCorporations(@Header("Authorization") auth: String): List<CorporationOption>
+
+    @GET("api/admin/org-picker/divisions")
+    suspend fun pickerDivisions(
+        @Header("Authorization") auth: String,
+        @Query("parentId") parentId: Long?
+    ): List<DivisionOption>
+
+    @GET("api/admin/org-picker/depots")
+    suspend fun pickerDepots(
+        @Header("Authorization") auth: String,
+        @Query("parentId") parentId: Long?
+    ): List<DepotOption>
+
+    @GET("api/admin/org-picker/towns")
+    suspend fun pickerTowns(
+        @Header("Authorization") auth: String,
+        @Query("parentId") parentId: Long?
+    ): List<TownOption>
+
+    // ------------------------------------------------------------------
+    // Fleet: bus number master, then vehicles
+    // ------------------------------------------------------------------
+
+    @GET("api/admin/fleet/bus-numbers")
+    suspend fun busNumbers(
+        @Header("Authorization") auth: String,
+        @Query("search") search: String?,
+        @Query("page") page: Int,
+        @Query("size") size: Int
+    ): Page<BusNumberItem>
+
+    @GET("api/admin/fleet/bus-numbers/by-depot/{depotId}")
+    suspend fun busNumbersForDepot(
+        @Header("Authorization") auth: String,
+        @Path("depotId") depotId: Long
+    ): List<BusNumberItem>
+
+    @POST("api/admin/fleet/bus-numbers")
+    suspend fun createBusNumber(
+        @Header("Authorization") auth: String,
+        @Body request: CreateBusNumberRequest
+    ): BusNumberItem
+
+    @PUT("api/admin/fleet/bus-numbers/{id}")
+    suspend fun updateBusNumber(
+        @Header("Authorization") auth: String,
+        @Path("id") id: Long,
+        @Body request: UpdateBusNumberRequest
+    ): BusNumberItem
+
+    @PATCH("api/admin/fleet/bus-numbers/{id}/enabled")
+    suspend fun toggleBusNumber(
+        @Header("Authorization") auth: String,
+        @Path("id") id: Long,
+        @Query("enabled") enabled: Boolean
+    ): BusNumberItem
+
+    @DELETE("api/admin/fleet/bus-numbers/{id}")
+    suspend fun deleteBusNumber(
+        @Header("Authorization") auth: String,
+        @Path("id") id: Long
+    ): Response<Unit>
 
     @GET("api/admin/fleet/buses")
     suspend fun buses(

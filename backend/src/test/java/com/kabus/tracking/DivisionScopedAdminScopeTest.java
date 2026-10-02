@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.time.LocalDate;
@@ -200,7 +201,7 @@ abstract class DivisionScopedAdminScopeTest extends TestSupport {
     void crossDivisionBusWrites_areForbidden() throws Exception {
         forbidden(put("/api/admin/fleet/buses/" + busB.getId())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json(Map.of("busType", "ORDINARY", "capacity", 40))), tokenA);
+                .content(json(Map.of("capacity", 40))), tokenA);
         forbidden(patch("/api/admin/fleet/buses/" + busB.getId() + "/enabled")
                 .param("enabled", "false"), tokenA);
     }
@@ -245,11 +246,13 @@ abstract class DivisionScopedAdminScopeTest extends TestSupport {
 
     @Test
     void createBusInOtherDivisionDepot_isForbidden() throws Exception {
+        // busB carries a real bus number of the foreign depot, so the body is
+        // valid and the rejection comes from the scope guard.
         forbidden(post("/api/admin/fleet/buses")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json(Map.of(
-                        "registrationNo", uniqueBase("KA-XX"),
-                        "busType", "ORDINARY", "capacity", 40,
+                        "busNumberId", busB.getBusNumber().getId(),
+                        "capacity", 40,
                         "depotId", depotB.getId(), "townId", townB.getId()))), tokenA);
     }
 
@@ -332,11 +335,20 @@ abstract class DivisionScopedAdminScopeTest extends TestSupport {
 
     @Test
     void divisionAdmin_canCreateWithinOwnScope() throws Exception {
+        MvcResult createdBusNumber = mvc.perform(post("/api/admin/fleet/bus-numbers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of(
+                                "busNumber", uniqueBase("KA-OWN"),
+                                "busType", "ORDINARY",
+                                "depotId", depotA.getId(), "townId", townA.getId())))
+                        .header(AUTH, bearer(tokenA)))
+                .andExpect(status().isCreated())
+                .andReturn();
         mvc.perform(post("/api/admin/fleet/buses")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of(
-                                "registrationNo", uniqueBase("KA-OWN"),
-                                "busType", "ORDINARY", "capacity", 40,
+                                "busNumberId", busNumberId(createdBusNumber),
+                                "capacity", 40,
                                 "depotId", depotA.getId(), "townId", townA.getId())))
                         .header(AUTH, bearer(tokenA)))
                 .andExpect(status().isCreated());
@@ -433,10 +445,7 @@ abstract class DivisionScopedAdminScopeTest extends TestSupport {
         return "Bearer " + token;
     }
 
-    private String json(Object body) throws Exception {
-        return om.writeValueAsString(body);
-    }
-
+    
     private void forbidden(MockHttpServletRequestBuilder request, String token) throws Exception {
         mvc.perform(request.header(AUTH, bearer(token)))
                 .andExpect(status().isForbidden());

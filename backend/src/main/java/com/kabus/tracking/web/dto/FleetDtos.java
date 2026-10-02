@@ -9,20 +9,67 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 
-/** DTOs for fleet (bus) management. */
+/** DTOs for the bus number master and fleet (vehicle) management. */
 public final class FleetDtos {
+
+    /** Bus types the project already recognises. */
+    public static final java.util.List<String> BUS_TYPES =
+            java.util.List.of("ORDINARY", "EXPRESS", "RAJADHARSHA");
 
     private FleetDtos() {
     }
 
-    public record CreateBusRequest(
-            @NotBlank(message = "Registration number is required.")
-            @Size(max = 20, message = "Registration number must be at most 20 characters.")
-            String registrationNo,
+    // ------------------------------------------------------------------
+    // Bus number master
+    // ------------------------------------------------------------------
+
+    public record CreateBusNumberRequest(
+            @NotBlank(message = "Bus number is required.")
+            @Size(max = 20, message = "Bus number must be at most 20 characters.")
+            String busNumber,
 
             @NotBlank(message = "Bus type is required.")
             @Size(max = 40, message = "Bus type must be at most 40 characters.")
             String busType,
+
+            @NotNull(message = "Depot is required.")
+            Long depotId,
+
+            @NotNull(message = "Town is required.")
+            Long townId) {
+    }
+
+    public record UpdateBusNumberRequest(
+            @NotBlank(message = "Bus type is required.")
+            @Size(max = 40, message = "Bus type must be at most 40 characters.")
+            String busType,
+
+            Long townId) {
+    }
+
+    public record BusNumberResponse(
+            Long id,
+            String busNumber,
+            String busType,
+            boolean enabled,
+            Long corporationId,
+            Long divisionId,
+            Long depotId,
+            String depotName,
+            Long townId,
+            String townName,
+            Long vehicleCount,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt) {
+    }
+
+    // ------------------------------------------------------------------
+    // Fleet (vehicles)
+    // ------------------------------------------------------------------
+
+    public record CreateBusRequest(
+            @NotNull(message = "Bus number is required. Pick one from the bus number master.")
+            Long busNumberId,
 
             @NotNull(message = "Capacity is required.")
             @Min(value = 1, message = "Capacity must be at least 1.")
@@ -56,10 +103,6 @@ public final class FleetDtos {
     }
 
     public record UpdateBusRequest(
-            @NotBlank(message = "Bus type is required.")
-            @Size(max = 40, message = "Bus type must be at most 40 characters.")
-            String busType,
-
             @NotNull(message = "Capacity is required.")
             @Min(value = 1, message = "Capacity must be at least 1.")
             @Max(value = 200, message = "Capacity is unrealistically large.")
@@ -87,10 +130,16 @@ public final class FleetDtos {
             Long townId) {
     }
 
+    /**
+     * Registration number and bus type are still reported under their historical
+     * JSON names so the passenger app, crew app and admin dashboards keep working
+     * unchanged; their values now come from the bus number master.
+     */
     public record BusResponse(
             Long id,
             String registrationNo,
             String busType,
+            Long busNumberId,
             Integer capacity,
             String fuelType,
             String makeModel,

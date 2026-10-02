@@ -299,12 +299,34 @@ CREATE TABLE IF NOT EXISTS crew (
 -- 4. BUSES & DOCUMENTS
 -- ------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS buses (
+CREATE TABLE IF NOT EXISTS bus_numbers (
     id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     town_id             BIGINT UNSIGNED NOT NULL,
+    depot_id            BIGINT UNSIGNED NOT NULL,
+    division_id         BIGINT UNSIGNED NOT NULL,
+    corporation_id      BIGINT UNSIGNED NOT NULL,
+    bus_number          VARCHAR(20)     NOT NULL,
+    bus_type            VARCHAR(40)     NOT NULL DEFAULT 'ORDINARY', -- ORDINARY | EXPRESS | RAJADHARSHA
+    enabled             TINYINT(1)      NOT NULL DEFAULT 1,
+    created_at          DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at          DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    -- A bus number is unique within its depot, not system-wide.
+    UNIQUE KEY uq_bus_numbers_depot_number (depot_id, bus_number),
+    KEY idx_bus_numbers_corporation (corporation_id),
+    KEY idx_bus_numbers_division (division_id),
+    KEY idx_bus_numbers_town (town_id),
+    CONSTRAINT fk_bus_numbers_town FOREIGN KEY (town_id) REFERENCES towns (id),
+    CONSTRAINT fk_bus_numbers_depot FOREIGN KEY (depot_id) REFERENCES depots (id),
+    CONSTRAINT fk_bus_numbers_division FOREIGN KEY (division_id) REFERENCES divisions (id),
+    CONSTRAINT fk_bus_numbers_corporation FOREIGN KEY (corporation_id) REFERENCES corporations (id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS buses (
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    bus_number_id       BIGINT UNSIGNED NOT NULL,   -- the bus number master this vehicle runs on
+    town_id             BIGINT UNSIGNED NOT NULL,
     depot_id            BIGINT UNSIGNED NOT NULL,   -- denormalized for fast filters
-    registration_no     VARCHAR(20)     NOT NULL,
-    bus_type            VARCHAR(40)     NOT NULL DEFAULT 'ORDINARY', -- ORDINARY | EXPRESS | RAJADHARSHA | ...
     capacity            INT             NOT NULL DEFAULT 40,
     fuel_type           VARCHAR(20)     NOT NULL DEFAULT 'DIESEL',
     make_model          VARCHAR(80)     NULL,
@@ -316,10 +338,11 @@ CREATE TABLE IF NOT EXISTS buses (
     created_at          DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     updated_at          DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     PRIMARY KEY (id),
-    UNIQUE KEY uq_buses_registration (registration_no),
+    KEY idx_buses_bus_number (bus_number_id),
     KEY idx_buses_town (town_id),
     KEY idx_buses_depot (depot_id),
     KEY idx_buses_status (status),
+    CONSTRAINT fk_buses_bus_number FOREIGN KEY (bus_number_id) REFERENCES bus_numbers (id),
     CONSTRAINT fk_buses_town FOREIGN KEY (town_id) REFERENCES towns (id),
     CONSTRAINT fk_buses_depot FOREIGN KEY (depot_id) REFERENCES depots (id)
 ) ENGINE=InnoDB;

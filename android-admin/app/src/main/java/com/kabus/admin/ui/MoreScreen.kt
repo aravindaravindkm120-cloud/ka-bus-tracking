@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.ManageAccounts
@@ -172,7 +173,8 @@ private fun moreGroups(role: String?): List<Pair<String, List<MoreNavItem>>> {
             add(MoreNavItem("Organization", "Corporations, divisions, depots, towns", Icons.Filled.Business, content = { OrganizationScreen(it) }))
             add(MoreNavItem("Users", "Admin accounts and roles", Icons.Filled.ManageAccounts, content = { UsersScreen(it) }))
         }
-        add(MoreNavItem("Fleet", "Buses, registration, capacity", Icons.Filled.DirectionsBus, content = { FleetScreen(it) }))
+        add(MoreNavItem("Bus Numbers", "Service numbers run by each depot", Icons.Filled.Label, content = { BusNumbersScreen(it) }))
+        add(MoreNavItem("Fleet", "Vehicles running on a bus number", Icons.Filled.DirectionsBus, content = { FleetScreen(it) }))
         add(MoreNavItem("Staff", "Depot-attached staff records", Icons.Filled.Group, content = { StaffScreen(it) }))
         add(MoreNavItem("Routes", "Route masters and stops", Icons.Filled.TripOrigin, content = { RoutesScreen(it, canManage = canManageRoutes(role)) }))
     }

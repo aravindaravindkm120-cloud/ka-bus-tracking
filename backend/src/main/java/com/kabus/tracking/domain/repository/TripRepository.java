@@ -27,7 +27,7 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             + "and (:term is null or lower(t.tripNumber) like lower(concat('%', :term, '%')) "
             + "     or lower(t.route.code) like lower(concat('%', :term, '%')) "
             + "     or lower(t.route.name) like lower(concat('%', :term, '%')) "
-            + "     or lower(t.bus.registrationNo) like lower(concat('%', :term, '%'))) "
+            + "     or lower(t.bus.busNumber.busNumber) like lower(concat('%', :term, '%'))) "
             + "order by t.tripDate desc, t.scheduledDeparture desc")
     Page<Trip> search(@Param("depotIds") Collection<Long> depotIds,
                       @Param("date") LocalDate date,
@@ -41,7 +41,7 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
             + "and (:term is null or lower(t.tripNumber) like lower(concat('%', :term, '%')) "
             + "     or lower(t.route.code) like lower(concat('%', :term, '%')) "
             + "     or lower(t.route.name) like lower(concat('%', :term, '%')) "
-            + "     or lower(t.bus.registrationNo) like lower(concat('%', :term, '%'))) "
+            + "     or lower(t.bus.busNumber.busNumber) like lower(concat('%', :term, '%'))) "
             + "order by t.tripDate desc, t.scheduledDeparture desc")
     Page<Trip> searchByTownIds(@Param("townIds") Collection<Long> townIds,
                                @Param("date") LocalDate date,

@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,6 +17,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -45,6 +48,7 @@ import com.kabus.admin.KaBusAdminApp
 import com.kabus.admin.data.AdminUserItem
 import com.kabus.admin.data.AuditItem
 import com.kabus.admin.data.BusItem
+import com.kabus.admin.data.BusNumberItem
 import com.kabus.admin.data.ChangePasswordRequest
 import com.kabus.admin.data.ChangeRoleRequest
 import com.kabus.admin.data.CreateBusRequest
@@ -134,8 +138,9 @@ private fun ListScreenScaffold(title: String, onBack: () -> Unit, content: @Comp
     }
 }
 
+/** Full-screen empty/error/loading placeholder shared by every list screen. */
 @Composable
-private fun CenterStatus(
+internal fun CenterStatus(
     text: String,
     error: Boolean = false,
     onRetry: (() -> Unit)? = null,
@@ -224,32 +229,50 @@ internal fun FleetScreen(app: KaBusAdminApp) {
 
 @Composable
 private fun FleetCreateDialog(app: KaBusAdminApp, onDismiss: () -> Unit, onCreated: () -> Unit) {
-    var reg by remember { mutableStateOf("") }
-    var busType by remember { mutableStateOf("") }
     var capacity by remember { mutableStateOf("40") }
     var fuel by remember { mutableStateOf("") }
     var make by remember { mutableStateOf("") }
-    var depotId by remember { mutableStateOf("") }
-    var townId by remember { mutableStateOf("") }
+    var busNumbers by remember { mutableStateOf(listOf<BusNumberItem>()) }
+    var busNumberId by remember { mutableStateOf<Long?>(null) }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val org = rememberOrgPicker(app)
 
-    val canSave = reg.isNotBlank() && busType.isNotBlank() &&
-        capacity.toIntOrNull() != null && depotId.toLongOrNull() != null && townId.toLongOrNull() != null
+    // A vehicle always runs on an existing bus number of its own depot.
+    LaunchedEffect(org.selectedDepotId) {
+        val depotId = org.selectedDepotId
+        busNumberId = null
+        busNumbers = if (depotId == null) emptyList() else runCatching {
+            app.api.busNumbersForDepot(app.auth(), depotId)
+        }.getOrElse {
+            error = it.message
+            emptyList()
+        }
+    }
+
+    val canSave = busNumberId != null &&
+        capacity.toIntOrNull() != null &&
+        org.selectedDepotId != null && org.selectedTownId != null
 
     AlertDialog(
         onDismissRequest = { if (!saving) onDismiss() },
         title = { Text("New bus") },
         text = {
-            Column {
-                OutlinedTextField(reg, { reg = it }, label = { Text("Registration no") }, singleLine = true)
-                OutlinedTextField(busType, { busType = it }, label = { Text("Bus type (e.g. ORDINARY)") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
+            PickerDialogBody {
+                OrgPickerFields(org)
+                Spacer(Modifier.height(8.dp))
+                PickerDropdownField(
+                    label = "Bus number",
+                    options = busNumbers.map { it.id to "${it.busNumber} - ${it.busType}" },
+                    selectedId = busNumberId,
+                    enabled = org.selectedDepotId != null,
+                    emptyMessage = "This depot has no bus numbers yet. Add one under Fleet > Bus Numbers.",
+                    onSelect = { busNumberId = it }
+                )
                 OutlinedTextField(capacity, { capacity = it }, label = { Text("Capacity") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
                 OutlinedTextField(fuel, { fuel = it }, label = { Text("Fuel type (optional)") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
                 OutlinedTextField(make, { make = it }, label = { Text("Make/model (optional)") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
-                OutlinedTextField(depotId, { depotId = it }, label = { Text("Depot ID") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
-                OutlinedTextField(townId, { townId = it }, label = { Text("Town ID") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp)) }
             }
         },
@@ -264,8 +287,7 @@ private fun FleetCreateDialog(app: KaBusAdminApp, onDismiss: () -> Unit, onCreat
                             app.api.createBus(
                                 app.auth(),
                                 CreateBusRequest(
-                                    registrationNo = reg.trim(),
-                                    busType = busType.trim(),
+                                    busNumberId = busNumberId!!,
                                     capacity = capacity.toInt(),
                                     fuelType = fuel.trim().ifBlank { null },
                                     makeModel = make.trim().ifBlank { null },
@@ -273,8 +295,8 @@ private fun FleetCreateDialog(app: KaBusAdminApp, onDismiss: () -> Unit, onCreat
                                     gpsDeviceId = null,
                                     gpsEnabled = null,
                                     status = null,
-                                    depotId = depotId.toLong(),
-                                    townId = townId.toLong()
+                                    depotId = org.selectedDepotId!!,
+                                    townId = org.selectedTownId!!
                                 )
                             )
                         }
@@ -356,25 +378,23 @@ private fun StaffCreateDialog(app: KaBusAdminApp, onDismiss: () -> Unit, onCreat
     var phone by remember { mutableStateOf("") }
     var empCode by remember { mutableStateOf("") }
     var designation by remember { mutableStateOf("") }
-    var depotId by remember { mutableStateOf("") }
-    var townId by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val org = rememberOrgPicker(app)
 
-    val canSave = name.isNotBlank() && depotId.toLongOrNull() != null
+    val canSave = name.isNotBlank() && org.selectedDepotId != null
 
     AlertDialog(
         onDismissRequest = { if (!saving) onDismiss() },
         title = { Text("New staff") },
         text = {
-            Column {
+            PickerDialogBody {
                 OutlinedTextField(name, { name = it }, label = { Text("Full name") }, singleLine = true)
                 OutlinedTextField(phone, { phone = it }, label = { Text("Phone (optional)") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
                 OutlinedTextField(empCode, { empCode = it }, label = { Text("Employee code (optional)") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
                 OutlinedTextField(designation, { designation = it }, label = { Text("Designation (optional)") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
-                OutlinedTextField(depotId, { depotId = it }, label = { Text("Depot ID") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
-                OutlinedTextField(townId, { townId = it }, label = { Text("Town ID (optional)") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
+                OrgPickerFields(org, requireTown = false)
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp)) }
             }
         },
@@ -394,8 +414,8 @@ private fun StaffCreateDialog(app: KaBusAdminApp, onDismiss: () -> Unit, onCreat
                                     empCode = empCode.trim().ifBlank { null },
                                     designation = designation.trim().ifBlank { null },
                                     status = "ACTIVE",
-                                    depotId = depotId.toLong(),
-                                    townId = townId.toLongOrNull(),
+                                    depotId = org.selectedDepotId!!,
+                                    townId = org.selectedTownId,
                                     userId = null
                                 )
                             )
@@ -420,6 +440,7 @@ internal fun RoutesScreen(app: KaBusAdminApp, canManage: Boolean = true) {
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var showForm by remember { mutableStateOf(false) }
+    var editStops by remember { mutableStateOf<RouteItem?>(null) }
     val scope = rememberCoroutineScope()
     val pull = remember { RefreshController() }
 
@@ -461,6 +482,12 @@ internal fun RoutesScreen(app: KaBusAdminApp, canManage: Boolean = true) {
                                     )
                                 }
                                 if (canManage) {
+                                    IconButton(onClick = { editStops = r }) {
+                                        Icon(
+                                            Icons.Filled.List,
+                                            contentDescription = "Edit stops for ${r.code}"
+                                        )
+                                    }
                                     Switch(
                                         checked = r.enabled,
                                         onCheckedChange = { en -> scope.launch {
@@ -486,6 +513,15 @@ internal fun RoutesScreen(app: KaBusAdminApp, canManage: Boolean = true) {
     if (showForm) {
         RouteCreateDialog(app, onDismiss = { showForm = false }, onCreated = { showForm = false; scope.launch { refresh() } })
     }
+
+    editStops?.let { target ->
+        RouteStopsDialog(
+            app = app,
+            route = target,
+            onDismiss = { editStops = null },
+            onSaved = { editStops = null; scope.launch { refresh() } }
+        )
+    }
 }
 
 @Composable
@@ -494,25 +530,26 @@ private fun RouteCreateDialog(app: KaBusAdminApp, onDismiss: () -> Unit, onCreat
     var name by remember { mutableStateOf("") }
     var origin by remember { mutableStateOf("") }
     var destination by remember { mutableStateOf("") }
-    var divisionId by remember { mutableStateOf("") }
     var distanceKm by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val org = rememberOrgPicker(app)
 
     val canSave = code.isNotBlank() && name.isNotBlank() && origin.isNotBlank() &&
-        destination.isNotBlank() && divisionId.toLongOrNull() != null
+        destination.isNotBlank() && org.selectedDivisionId != null
 
     AlertDialog(
         onDismissRequest = { if (!saving) onDismiss() },
         title = { Text("New route") },
         text = {
-            Column {
+            PickerDialogBody {
                 OutlinedTextField(code, { code = it }, label = { Text("Route code") }, singleLine = true)
                 OutlinedTextField(name, { name = it }, label = { Text("Route name") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
                 OutlinedTextField(origin, { origin = it }, label = { Text("Origin") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
                 OutlinedTextField(destination, { destination = it }, label = { Text("Destination") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
-                OutlinedTextField(divisionId, { divisionId = it }, label = { Text("Division ID") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
+                // Routes are division-level: no depot/town involved.
+                OrgPickerFields(org, includeDepot = false)
                 OutlinedTextField(distanceKm, { distanceKm = it }, label = { Text("Distance km (optional)") }, singleLine = true, modifier = Modifier.padding(top = 8.dp))
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp)) }
             }
@@ -528,7 +565,7 @@ private fun RouteCreateDialog(app: KaBusAdminApp, onDismiss: () -> Unit, onCreat
                             app.api.createRoute(
                                 app.auth(),
                                 CreateRouteRequest(
-                                    divisionId = divisionId.toLong(),
+                                    divisionId = org.selectedDivisionId,
                                     code = code.trim(),
                                     name = name.trim(),
                                     origin = origin.trim(),

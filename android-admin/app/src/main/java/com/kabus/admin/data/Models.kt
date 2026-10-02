@@ -270,12 +270,79 @@ data class TownResponse(
 )
 
 // ----------------------------------------------------------------------
+// Organization picker - read-only, scope-aware lookups that back the
+// Corporation -> Division -> Depot -> Town dropdowns on the "Add" forms.
+// Distinct from the organization management endpoints above, which are
+// SUPER_ADMIN-only and therefore unusable by scoped roles.
+// ----------------------------------------------------------------------
+
+data class CorporationOption(
+    val id: Long,
+    val code: String,
+    val name: String
+)
+
+data class DivisionOption(
+    val id: Long,
+    val corporationId: Long,
+    val code: String,
+    val name: String
+)
+
+data class DepotOption(
+    val id: Long,
+    val divisionId: Long,
+    val code: String,
+    val name: String
+)
+
+data class TownOption(
+    val id: Long,
+    val depotId: Long,
+    val code: String,
+    val name: String
+)
+
+// ----------------------------------------------------------------------
+// Bus number master - /api/admin/fleet/bus-numbers
+// ----------------------------------------------------------------------
+
+data class CreateBusNumberRequest(
+    val busNumber: String,
+    val busType: String,
+    val depotId: Long,
+    val townId: Long
+)
+
+data class UpdateBusNumberRequest(
+    val busType: String,
+    val townId: Long?
+)
+
+data class BusNumberItem(
+    val id: Long,
+    val busNumber: String,
+    val busType: String,
+    val enabled: Boolean,
+    val corporationId: Long?,
+    val divisionId: Long?,
+    val depotId: Long?,
+    val depotName: String?,
+    val townId: Long?,
+    val townName: String?,
+    val vehicleCount: Long?,
+    @SerializedName("createdAt") val createdAt: String?,
+    @SerializedName("updatedAt") val updatedAt: String?
+)
+
+// ----------------------------------------------------------------------
 // Fleet (buses) - GET/POST /api/admin/fleet/buses
+// A vehicle references an existing bus number; registrationNo/busType are
+// served from that master under their historical names.
 // ----------------------------------------------------------------------
 
 data class CreateBusRequest(
-    val registrationNo: String,
-    val busType: String,
+    val busNumberId: Long,
     val capacity: Int,
     val fuelType: String?,
     val makeModel: String?,
@@ -288,7 +355,6 @@ data class CreateBusRequest(
 )
 
 data class UpdateBusRequest(
-    val busType: String,
     val capacity: Int,
     val fuelType: String?,
     val makeModel: String?,
@@ -303,6 +369,7 @@ data class BusItem(
     val id: Long,
     val registrationNo: String,
     val busType: String?,
+    val busNumberId: Long?,
     val capacity: Int?,
     val fuelType: String?,
     val makeModel: String?,

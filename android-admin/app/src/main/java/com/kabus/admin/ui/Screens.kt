@@ -19,10 +19,17 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -190,11 +197,13 @@ private fun DashStatCard(cell: DashCell.Stat) {
 }
 
 @Composable
-fun TripsScreen(app: KaBusAdminApp) {
+fun TripsScreen(app: KaBusAdminApp, canManage: Boolean = true) {
     var page by remember { mutableStateOf(0) }
     var items by remember { mutableStateOf(listOf<com.kabus.admin.data.TripItem>()) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
+    var showCreate by remember { mutableStateOf(false) }
+    var assignCrewFor by remember { mutableStateOf<com.kabus.admin.data.TripItem?>(null) }
     val refresh = remember { RefreshController() }
     val scope = rememberCoroutineScope()
 
@@ -210,36 +219,91 @@ fun TripsScreen(app: KaBusAdminApp) {
 
     val onRefresh: () -> Unit = { scope.launch { refresh.run { load() } } }
 
-    RefreshableBox(
-        refreshing = refresh.refreshing,
-        onRefresh = onRefresh,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 14.dp)) {
-            if (error != null && items.isNotEmpty()) {
-                item { RefreshErrorBanner(error!!, onRetry = onRefresh) }
+    Scaffold(
+        floatingActionButton = {
+            if (canManage) {
+                FloatingActionButton(onClick = { showCreate = true }) {
+                    Icon(Icons.Filled.Add, contentDescription = "New trip")
+                }
             }
-            if (loading && items.isEmpty()) item { CircularProgressIndicator() }
-            if (error != null && items.isEmpty()) {
-                item { Text(error!!, color = MaterialTheme.colorScheme.error) }
-            }
-            items(items.size) { i ->
-                val t = items[i]
-                Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text("${t.tripNumber} · ${t.busRegistrationNo ?: "—"}", style = MaterialTheme.typography.titleSmall)
+        }
+    ) { pad ->
+        RefreshableBox(
+            refreshing = refresh.refreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize().padding(pad)
+        ) {
+            LazyColumn(Modifier.fillMaxSize().padding(horizontal = 14.dp)) {
+                if (error != null && items.isNotEmpty()) {
+                    item { RefreshErrorBanner(error!!, onRetry = onRefresh) }
+                }
+                if (loading && items.isEmpty()) item { CircularProgressIndicator() }
+                if (error != null && items.isEmpty()) {
+                    item { Text(error!!, color = MaterialTheme.colorScheme.error) }
+                }
+                if (!loading && error == null && items.isEmpty()) {
+                    item {
                         Text(
-                            "${t.routeName ?: "—"} · ${t.status}",
-                            style = MaterialTheme.typography.bodyMedium
+                            "No trips yet.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 24.dp)
                         )
-                        Text(
-                            "Dep: ${t.scheduledDeparture ?: "—"} · Arr: ${t.scheduledArrival ?: "—"}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                    }
+                }
+                items(items.size) { i ->
+                    val t = items[i]
+                    Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("${t.tripNumber} · ${t.busRegistrationNo ?: "—"}", style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "${t.routeName ?: "—"} · ${t.status}",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    "Dep: ${t.scheduledDeparture ?: "—"} · Arr: ${t.scheduledArrival ?: "—"}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                if (t.crewAssignments.isNotEmpty()) {
+                                    Text(
+                                        "Crew: " + t.crewAssignments.joinToString {
+                                            it.fullName ?: it.badgeNo ?: "#${it.crewId}"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            if (canManage) {
+                                IconButton(onClick = { assignCrewFor = t }) {
+                                    Icon(
+                                        Icons.Filled.Groups,
+                                        contentDescription = "Assign crew to ${t.tripNumber}"
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+
+    if (showCreate) {
+        TripCreateDialog(
+            app = app,
+            onDismiss = { showCreate = false },
+            onCreated = { showCreate = false; scope.launch { load() } }
+        )
+    }
+
+    assignCrewFor?.let { target ->
+        TripCrewDialog(
+            app = app,
+            trip = target,
+            onDismiss = { assignCrewFor = null },
+            onAssigned = { assignCrewFor = null; scope.launch { load() } }
+        )
     }
 }
 

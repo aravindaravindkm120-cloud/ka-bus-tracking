@@ -3,6 +3,7 @@ package com.kabus.tracking;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kabus.tracking.domain.entity.Bus;
+import com.kabus.tracking.domain.entity.BusNumber;
 import com.kabus.tracking.domain.entity.Corporation;
 import com.kabus.tracking.domain.entity.CorporationAdminProfile;
 import com.kabus.tracking.domain.entity.Crew;
@@ -26,6 +27,7 @@ import com.kabus.tracking.domain.entity.User;
 import com.kabus.tracking.domain.enums.LiveStatus;
 import com.kabus.tracking.domain.enums.RoleCode;
 import com.kabus.tracking.domain.enums.TripStatus;
+import com.kabus.tracking.domain.repository.BusNumberRepository;
 import com.kabus.tracking.domain.repository.BusRepository;
 import com.kabus.tracking.domain.repository.CorporationAdminProfileRepository;
 import com.kabus.tracking.domain.repository.CorporationRepository;
@@ -94,6 +96,7 @@ public abstract class TestSupport {
     @Autowired protected RouteRepository routeRepository;
     @Autowired protected RouteStopRepository routeStopRepository;
     @Autowired protected BusRepository busRepository;
+    @Autowired protected BusNumberRepository busNumberRepository;
     @Autowired protected TripRepository tripRepository;
     @Autowired protected CrewRepository crewRepository;
     @Autowired protected CrewAssignmentRepository crewAssignmentRepository;
@@ -258,12 +261,33 @@ public abstract class TestSupport {
         return routeStopRepository.save(s);
     }
 
-    protected Bus bus(Depot depot, Town town) {
+    /** A bus number master for the given depot/town. */
+    protected BusNumber busNumber(Depot depot, Town town) {
+        return busNumber(depot, town, "KA-RT-" + uniqueBase("").replace("-", ""));
+    }
+
+    protected BusNumber busNumber(Depot depot, Town town, String busNumber) {
+        BusNumber bn = new BusNumber();
+        bn.setDepot(depot);
+        bn.setTown(town);
+        bn.setDivision(depot.getDivision());
+        bn.setCorporation(depot.getDivision().getCorporation());
+        bn.setBusNumber(busNumber);
+        bn.setBusType("ORDINARY");
+        bn.setEnabled(true);
+        return busNumberRepository.save(bn);
+    }
+
+protected Bus bus(Depot depot, Town town) {
+        return bus(busNumber(depot, town), depot, town);
+    }
+
+    /** A second vehicle on an existing bus number, so one master can have many. */
+    protected Bus bus(BusNumber busNumber, Depot depot, Town town) {
         Bus b = new Bus();
         b.setDepot(depot);
         b.setTown(town);
-        b.setRegistrationNo(uniqueBase("KA").replace("KA", "KA-RT-") + "X");
-        b.setBusType("ORDINARY");
+        b.setBusNumber(busNumber);
         b.setCapacity(40);
         return busRepository.save(b);
     }
@@ -337,6 +361,15 @@ public abstract class TestSupport {
         n.setTitle(title);
         n.setBody(title);
         return notificationRepository.save(n);
+    }
+
+    protected String json(Object body) throws Exception {
+        return om.writeValueAsString(body);
+    }
+
+    /** Reads the "id" out of a JSON response body. */
+    protected Long busNumberId(MvcResult result) throws Exception {
+        return om.readTree(result.getResponse().getContentAsString()).get("id").asLong();
     }
 
     protected CrewAssignment assignment(Trip trip, Crew crew, String crewType) {
