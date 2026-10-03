@@ -3744,3 +3744,98 @@ INSERT INTO depot_heads (user_id, depot_id)
 SELECT u.id, dp.id FROM users u, depots dp JOIN divisions d ON d.id = dp.division_id JOIN corporations c ON c.id = d.corporation_id
 WHERE u.username='head.svp@bmtc.dev' AND c.code='BMTC' AND d.code='NWZ' AND dp.code='SVP'
 ON DUPLICATE KEY UPDATE depot_id = VALUES(depot_id);
+
+-- ============================================================
+-- ============================================================
+-- ORGANIZATION COMPLETION: divisions + depots that were absent
+-- from the generated master-data block above.
+--
+-- Hand-maintained and NOT generated, so it is kept separate from
+-- the "do not hand-edit" master section. Only records that did
+-- not already exist are added here:
+--
+--   KSRTC  Madhugiri        (division + 3 depots)
+--   KSRTC  Mysore City      Nanjangudu
+--   KKRTC  Kalaburagi-2     Aland
+--   BMTC   South            Shanthinagar-2, Shanthinagar-3
+--   BMTC   North-West       Peenya-9, Peenya-22
+--   BMTC   North-East       K.R. Puram-29
+--   BMTC   West             Kengeri-37
+--
+-- Depots that already exist under a different spelling are
+-- deliberately NOT duplicated; the existing rows are reused.
+-- The cascading picker reads whatever is in these tables, so no
+-- UI change is needed for these rows to appear.
+--
+-- Idempotent: keyed on the same uniqueness keys the schema
+-- declares (uq_divisions_corp_code, uq_depots_division_code),
+-- so re-running this file updates in place and never adds a
+-- second corporation, division or depot.
+--
+-- Towns are intentionally NOT created here; a depot with no town
+-- is valid and the admin picker shows "No towns available".
+-- ============================================================
+
+-- KSRTC - Madhugiri Division (absent entirely)
+INSERT INTO divisions (corporation_id, code, name, head_office)
+SELECT c.id, 'MDG', 'Madhugiri', 'Madhugiri' FROM corporations c WHERE c.code = 'KSRTC'
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO depots (division_id, code, name, address, phone)
+SELECT d.id, 'MDG', 'Madhugiri', NULL, NULL
+FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='KSRTC' AND d.code='MDG'
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO depots (division_id, code, name, address, phone)
+SELECT d.id, 'SIR', 'Sira', NULL, NULL
+FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='KSRTC' AND d.code='MDG'
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO depots (division_id, code, name, address, phone)
+SELECT d.id, 'PVD', 'Pavagada', NULL, NULL
+FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='KSRTC' AND d.code='MDG'
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+-- KSRTC - Mysore City: Nanjangudu was missing
+INSERT INTO depots (division_id, code, name, address, phone)
+SELECT d.id, 'NJD', 'Nanjangudu', NULL, NULL
+FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='KSRTC' AND d.code='MYSC'
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+-- KKRTC - Kalaburagi-2: Aland was missing
+INSERT INTO depots (division_id, code, name, address, phone)
+SELECT d.id, 'ALD', 'Aland', NULL, NULL
+FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='KKRTC' AND d.code='KLBB'
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+-- BMTC - numbered depots kept alongside the unnumbered parent
+-- (Shanthinagar / Peenya / K.R. Puram / Kengeri already exist).
+INSERT INTO depots (division_id, code, name, address, phone)
+SELECT d.id, 'ST2', 'Shanthinagar-2', NULL, NULL
+FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='BMTC' AND d.code='STZ'
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO depots (division_id, code, name, address, phone)
+SELECT d.id, 'ST3', 'Shanthinagar-3', NULL, NULL
+FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='BMTC' AND d.code='STZ'
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO depots (division_id, code, name, address, phone)
+SELECT d.id, 'PNY9', 'Peenya-9', NULL, NULL
+FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='BMTC' AND d.code='NWZ'
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO depots (division_id, code, name, address, phone)
+SELECT d.id, 'PNY22', 'Peenya-22', NULL, NULL
+FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='BMTC' AND d.code='NWZ'
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO depots (division_id, code, name, address, phone)
+SELECT d.id, 'KRP29', 'K.R. Puram-29', NULL, NULL
+FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='BMTC' AND d.code='NEZ'
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO depots (division_id, code, name, address, phone)
+SELECT d.id, 'KGR37', 'Kengeri-37', NULL, NULL
+FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='BMTC' AND d.code='WTZ'
+ON DUPLICATE KEY UPDATE name = VALUES(name);
