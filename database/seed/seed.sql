@@ -3774,68 +3774,74 @@ ON DUPLICATE KEY UPDATE depot_id = VALUES(depot_id);
 --
 -- Towns are intentionally NOT created here; a depot with no town
 -- is valid and the admin picker shows "No towns available".
+--
+-- Unlike the generated block above, these inserts set enabled,
+-- created_at and updated_at explicitly. Production declares those
+-- columns NOT NULL with no default (and datetime(6)), so relying on
+-- column defaults fails there with ERROR 1364. This matches the
+-- convention in database/seed/seed-production.sql.
 -- ============================================================
 
 -- KSRTC - Madhugiri Division (absent entirely)
-INSERT INTO divisions (corporation_id, code, name, head_office)
-SELECT c.id, 'MDG', 'Madhugiri', 'Madhugiri' FROM corporations c WHERE c.code = 'KSRTC'
+INSERT INTO divisions (corporation_id, code, name, head_office, enabled, created_at, updated_at)
+SELECT c.id, 'MDG', 'Madhugiri', 'Madhugiri', 1, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3) FROM corporations c WHERE c.code = 'KSRTC'
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
-INSERT INTO depots (division_id, code, name, address, phone)
-SELECT d.id, 'MDG', 'Madhugiri', NULL, NULL
+INSERT INTO depots (division_id, code, name, address, phone, enabled, created_at, updated_at)
+SELECT d.id, 'MDG', 'Madhugiri', NULL, NULL, 1, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
 FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='KSRTC' AND d.code='MDG'
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
-INSERT INTO depots (division_id, code, name, address, phone)
-SELECT d.id, 'SIR', 'Sira', NULL, NULL
+INSERT INTO depots (division_id, code, name, address, phone, enabled, created_at, updated_at)
+SELECT d.id, 'SIR', 'Sira', NULL, NULL, 1, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
 FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='KSRTC' AND d.code='MDG'
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
-INSERT INTO depots (division_id, code, name, address, phone)
-SELECT d.id, 'PVD', 'Pavagada', NULL, NULL
+INSERT INTO depots (division_id, code, name, address, phone, enabled, created_at, updated_at)
+SELECT d.id, 'PVD', 'Pavagada', NULL, NULL, 1, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
 FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='KSRTC' AND d.code='MDG'
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 -- KSRTC - Mysore City: Nanjangudu was missing
-INSERT INTO depots (division_id, code, name, address, phone)
-SELECT d.id, 'NJD', 'Nanjangudu', NULL, NULL
+INSERT INTO depots (division_id, code, name, address, phone, enabled, created_at, updated_at)
+SELECT d.id, 'NJD', 'Nanjangudu', NULL, NULL, 1, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
 FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='KSRTC' AND d.code='MYSC'
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 -- KKRTC - Kalaburagi-2: Aland was missing
-INSERT INTO depots (division_id, code, name, address, phone)
-SELECT d.id, 'ALD', 'Aland', NULL, NULL
+INSERT INTO depots (division_id, code, name, address, phone, enabled, created_at, updated_at)
+SELECT d.id, 'ALD', 'Aland', NULL, NULL, 1, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
 FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='KKRTC' AND d.code='KLBB'
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 -- BMTC - numbered depots kept alongside the unnumbered parent
 -- (Shanthinagar / Peenya / K.R. Puram / Kengeri already exist).
-INSERT INTO depots (division_id, code, name, address, phone)
-SELECT d.id, 'ST2', 'Shanthinagar-2', NULL, NULL
+INSERT INTO depots (division_id, code, name, address, phone, enabled, created_at, updated_at)
+SELECT d.id, 'ST2', 'Shanthinagar-2', NULL, NULL, 1, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
 FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='BMTC' AND d.code='STZ'
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
-INSERT INTO depots (division_id, code, name, address, phone)
-SELECT d.id, 'ST3', 'Shanthinagar-3', NULL, NULL
+INSERT INTO depots (division_id, code, name, address, phone, enabled, created_at, updated_at)
+SELECT d.id, 'ST3', 'Shanthinagar-3', NULL, NULL, 1, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
 FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='BMTC' AND d.code='STZ'
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
-INSERT INTO depots (division_id, code, name, address, phone)
-SELECT d.id, 'PNY9', 'Peenya-9', NULL, NULL
+INSERT INTO depots (division_id, code, name, address, phone, enabled, created_at, updated_at)
+SELECT d.id, 'PNY9', 'Peenya-9', NULL, NULL, 1, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
 FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='BMTC' AND d.code='NWZ'
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
-INSERT INTO depots (division_id, code, name, address, phone)
-SELECT d.id, 'PNY22', 'Peenya-22', NULL, NULL
+INSERT INTO depots (division_id, code, name, address, phone, enabled, created_at, updated_at)
+SELECT d.id, 'PNY22', 'Peenya-22', NULL, NULL, 1, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
 FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='BMTC' AND d.code='NWZ'
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
-INSERT INTO depots (division_id, code, name, address, phone)
-SELECT d.id, 'KRP29', 'K.R. Puram-29', NULL, NULL
+INSERT INTO depots (division_id, code, name, address, phone, enabled, created_at, updated_at)
+SELECT d.id, 'KRP29', 'K.R. Puram-29', NULL, NULL, 1, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
 FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='BMTC' AND d.code='NEZ'
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
-INSERT INTO depots (division_id, code, name, address, phone)
-SELECT d.id, 'KGR37', 'Kengeri-37', NULL, NULL
+INSERT INTO depots (division_id, code, name, address, phone, enabled, created_at, updated_at)
+SELECT d.id, 'KGR37', 'Kengeri-37', NULL, NULL, 1, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)
 FROM divisions d JOIN corporations c ON c.id = d.corporation_id WHERE c.code='BMTC' AND d.code='WTZ'
 ON DUPLICATE KEY UPDATE name = VALUES(name);
